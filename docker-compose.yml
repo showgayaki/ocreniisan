@@ -1,0 +1,12 @@
+version: "3"
+services:
+  ocreniisan:
+    build: ./
+    container_name: app-ocreniisan
+    volumes:
+      - type: bind
+        source: "./"
+        target: "/var/ocreniisan/"
+    ports:
+      - "8004:8004"
+    restart: always
