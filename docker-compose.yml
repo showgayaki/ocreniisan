@@ -7,6 +7,9 @@ services:
       - type: bind
         source: "./"
         target: "/var/ocreniisan/"
+    environment:
+      TZ: Asia/Tokyo
+      GOOGLE_APPLICATION_CREDENTIALS: '${GOOGLE_APPLICATION_CREDENTIALS}'
     ports:
       - "8004:8004"
     restart: always
