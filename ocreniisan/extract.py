@@ -13,8 +13,6 @@ class Extract:
         self.extract_info()
 
     def extract_info(self):
-        # 店舗情報を入れる
-        self.response['store_dict'] = store_dict.STORE_DICT
         # 店舗名、日付、合計金額を抜き取り
         for text in self.texts:
             if not 'store' in self.response or self.response['store'] is None:
@@ -27,6 +25,9 @@ class Extract:
                         self.response['date'] = self.payment_date(search.group())
                     elif key == 'total' and not 'total' in self.response:
                         self.response['total'] = self.total_amount(search.group())
+
+        # サブカテゴリを入れておく
+        self.response['sub_category'] = store_dict.STORE_DICT[self.response['store']]
 
     def payment_date(self, text):
         p_date = text.translate(str.maketrans({'年': '-', '月': '-', '日': None, '/': '-'}))
