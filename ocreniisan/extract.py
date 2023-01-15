@@ -1,5 +1,5 @@
 import re
-from . import store_list
+from . import store_dict
 
 class Extract:
     regex_dict = {
@@ -13,6 +13,9 @@ class Extract:
         self.extract_info()
 
     def extract_info(self):
+        # 店舗情報を入れる
+        self.response['store_dict'] = store_dict.STORE_DICT
+        # 店舗名、日付、合計金額を抜き取り
         for text in self.texts:
             if not 'store' in self.response or self.response['store'] is None:
                 self.response['store'] = self.store_name(text)
@@ -30,9 +33,9 @@ class Extract:
         return p_date
 
     def store_name(self, text):
-        for store in store_list.STORE_LIST:
-            if store in text:
-                return store
+        for key in store_dict.STORE_DICT.keys():
+            if key in text:
+                return key
 
     def total_amount(self, text):
         total_regex = r'[¥\*][ \d,.]+'

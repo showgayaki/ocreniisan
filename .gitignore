@@ -132,4 +132,4 @@ dmypy.json
 key/
 *.jpg
 *.png
-store_list.py
+store_dict.py

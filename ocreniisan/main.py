@@ -26,8 +26,10 @@ async def receipt_ocr(receiptImage: UploadFile):
     try:
         trimmed_image_path = trim.main(original_image_path)
     except Exception as e:
-        print(e)
-        return {'error': 'レシートを読み取れませんでした。\n写真を撮り直してください。'}
+        return {
+            'error': 'レシートを読み取れませんでした。\n写真を撮り直してください。',
+            'detail': str(e)
+        }
 
     ocred_filename = Path(trimmed_image_path).name.replace('.png', '_ocred.png')
     ocred_image_path = Path(image_save_dir).joinpath(ocred_filename)
