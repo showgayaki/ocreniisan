@@ -41,4 +41,5 @@ async def receipt_ocr(receiptImage: UploadFile):
 
     # 情報抽出
     ext = Extract(texts)
-    return ext.response
+    response = ext.extract_info()
+    return response
