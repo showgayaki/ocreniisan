@@ -6,7 +6,7 @@ from . import trim, doctext
 from .extract import Extract
 
 
-app = FastAPI(docs_url='/ocreniisan/docs')
+app = FastAPI(root_path='/ocreniisan', docs_url='/ocreniisan/docs')
 
 
 @app.post('/ocreniisan')
@@ -43,3 +43,8 @@ async def receipt_ocr(receiptImage: UploadFile):
     ext = Extract(texts)
     response = ext.extract_info()
     return response
+
+
+@app.get(app.root_path + '/openapi.json')
+def custom_swagger_ui_html():
+    return app.openapi()
