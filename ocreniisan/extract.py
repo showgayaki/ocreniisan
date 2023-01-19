@@ -1,6 +1,7 @@
 import re
 from . import store_dict
 
+
 class Extract:
     regex_dict = {
         'date': r'[12]\d{3}[/\-年 ](0?[1-9]|1[0-2])[/\-月 ]([12][0-9]|3[01]|0?[0-9])日?',
