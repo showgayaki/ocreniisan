@@ -1,14 +1,18 @@
 version: "3"
 services:
   ocreniisan:
-    build: ./
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - ARCH=x86_64
     container_name: app-ocreniisan
     volumes:
       - type: bind
         source: "./"
-        target: "/var/ocreniisan/"
+        target: "/app"
     environment:
-      TZ: Asia/Tokyo
+      TZ: '${TIME_ZONE}'
       GOOGLE_APPLICATION_CREDENTIALS: '${GOOGLE_APPLICATION_CREDENTIALS}'
     ports:
       - "8004:8004"
