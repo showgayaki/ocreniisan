@@ -15,7 +15,8 @@ https://github.com/yrarchi/household_accounts
 
 class GetReceiptContours:
     save_dir = os.path.join(os.path.dirname(__file__), 'images')
-    if not os.path.isdir(save_dir): os.mkdir(save_dir)
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir)
 
     def __init__(self, input_path):
         self.input_file = cv2.imread(input_path)

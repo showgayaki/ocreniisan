@@ -15,15 +15,15 @@ class Extract:
         response = {}
         # 店舗名、日付、合計金額を抜き取り
         for text in self.texts:
-            if not 'store' in response or response['store'] is None:
+            if 'store' not in response or response['store'] is None:
                 response['store'] = self.store_name(text)
 
             for key, val in self.regex_dict.items():
                 search = re.search(val, text)
                 if search:
-                    if key == 'date' and not 'date' in response:
+                    if key == 'date' and 'date' not in response:
                         response['date'] = self.payment_date(search.group())
-                    elif key == 'total' and not 'total' in response:
+                    elif key == 'total' and 'total' not in response:
                         response['total'] = self.total_amount(search.group())
 
         # サブカテゴリを入れておく

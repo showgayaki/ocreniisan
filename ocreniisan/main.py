@@ -13,7 +13,8 @@ app = FastAPI(root_path='/ocreniisan', docs_url='/ocreniisan/docs')
 async def receipt_ocr(receiptImage: UploadFile):
     # 画像保存用ディレクトリがなかったら作成
     image_save_dir = Path(__file__).parent.joinpath('images').resolve()
-    if not image_save_dir.is_dir(): image_save_dir.mkdir()
+    if not image_save_dir.is_dir():
+        image_save_dir.mkdir()
 
     # アップロードされた画像を保存
     dt_now = datetime.now()
