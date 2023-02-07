@@ -6,7 +6,8 @@ services:
       dockerfile: ./Dockerfile
       args:
         - ARCH=x86_64
-    container_name: app-ocreniisan
+    image: ocreniisan
+    container_name: ocreniisan
     volumes:
       - type: bind
         source: "./"
