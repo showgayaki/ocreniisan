@@ -39,4 +39,4 @@ WORKDIR /app
 COPY . /app
 
 EXPOSE 8004
-ENTRYPOINT ["python", "-m", "uvicorn", "ocreniisan.main:app", "--reload", "--host", "0.0.0.0", "--port", "8004"]
+ENTRYPOINT ["python", "-m", "uvicorn", "ocreniisan.main:app", "--workers", "4", "--reload", "--host", "0.0.0.0", "--port", "8004"]

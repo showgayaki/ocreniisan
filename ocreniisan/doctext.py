@@ -22,13 +22,8 @@ class FeatureType(Enum):
 def draw_boxes(image, lines, color):
     """Draw a border around the image using the hints in the vector list."""
     draw = ImageDraw.Draw(image)
-    texts = []
 
     for line in lines:
-        row = [i[2] for i in line]
-        row = ''.join(row)
-        texts.append(row)
-
         draw.polygon(
             [
                 # top left
@@ -47,10 +42,10 @@ def draw_boxes(image, lines, color):
             None,
             color,
         )
-    return image, texts
+    return image
 
 
-def get_sorted_lines(image_file, threshold=14):
+def get_sorted_lines(image_file, threshold=20):
     """Boundingboxの左上の位置を参考に行ごとの文章にParseする
 
     Args:
@@ -58,31 +53,30 @@ def get_sorted_lines(image_file, threshold=14):
         threshold (int, optional): 同じ列だと判定するしきい値
 
     Returns:
-        line: list of [x,y,text,symbol.boundingbox]
+        lines: list of [x, y, text, word.boundingbox]
     """
-    client = vision.ImageAnnotatorClient()
-    bounds = []
-
     with io.open(image_file, "rb") as image_file:
         content = image_file.read()
 
     image = vision.Image(content=content)
+    client = vision.ImageAnnotatorClient()
     response = client.document_text_detection(image=image)
     document = response.full_text_annotation
 
     # テキスト抽出とソート
-    document = response.full_text_annotation
     bounds = []
     for page in document.pages:
         for block in page.blocks:
             for paragraph in block.paragraphs:
                 for word in paragraph.words:
-                    for symbol in word.symbols:  # 左上のBBOXの情報をx,yに集約
-                        x = symbol.bounding_box.vertices[0].x
-                        y = symbol.bounding_box.vertices[0].y
-                        text = symbol.text
-                        bounds.append([x, y, text, symbol.bounding_box])
+                    word_text = ''
+                    for symbol in word.symbols:
+                        word_text += symbol.text
+                    x = word.bounding_box.vertices[0].x
+                    y = word.bounding_box.vertices[0].y
+                    bounds.append([x, y, word_text, word.bounding_box])
     bounds.sort(key=lambda x: x[1])
+
     # 同じ高さのものをまとめる
     old_y = -1
     line = []
@@ -107,23 +101,13 @@ def get_sorted_lines(image_file, threshold=14):
 
 
 def render_doc_text(filein, fileout):
-    image = Image.open(filein)
     lines = get_sorted_lines(filein)
+    image = Image.open(filein)
 
-    _, texts = draw_boxes(image, lines, "green")
-
+    draw_boxes(image, lines, "green")
     if fileout != 0:
         image.save(fileout)
     else:
         image.show()
 
-    return texts
-
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("detect_file", help="The image for text detection.")
-#     parser.add_argument("-out_file", help="Optional output file", default=0)
-#     args = parser.parse_args()
-
-#     render_doc_text(args.detect_file, args.out_file)
+    return lines

@@ -35,13 +35,13 @@ async def receipt_ocr(receiptImage: UploadFile):
     ocred_filename = Path(trimmed_image_path).name.replace('.png', '_ocred.png')
     ocred_image_path = Path(image_save_dir).joinpath(ocred_filename)
     # OCR実行
-    texts = doctext.render_doc_text(trimmed_image_path, ocred_image_path)
+    lines = doctext.render_doc_text(trimmed_image_path, ocred_image_path)
     # 画像ファイル削除
     for f in image_save_dir.iterdir():
         f.unlink()
 
     # 情報抽出
-    ext = Extract(texts)
+    ext = Extract(lines)
     response = ext.extract_info()
     return response
 
