@@ -14,17 +14,16 @@ https://github.com/yrarchi/household_accounts
 
 
 class GetReceiptContours:
-    save_dir = os.path.join(os.path.dirname(__file__), 'images')
-    if not os.path.isdir(save_dir):
-        os.mkdir(save_dir)
-
     def __init__(self, input_path):
+        self.save_dir = os.path.join(os.path.dirname(__file__), 'images')
+        if not os.path.isdir(self.save_dir):
+            os.mkdir(self.save_dir)
+
         self.input_file = cv2.imread(input_path)
         self.input_filename = os.path.splitext(os.path.basename(input_path))[0]
         self.height, self.width, _ = self.input_file.shape
         self.img_size = self.height * self.width
         self.binary_img = self.binarize()
-        self.binary_img = self.noise_reduction(self.binary_img)
         self.contours = self.find_contours()
         self.approx_contours = self.approximate_contours()
         self.rectangle_contours = self.limited_to_rectangles()
@@ -34,12 +33,24 @@ class GetReceiptContours:
         """
         画像を2値化する
         """
+        # グレースケールに変換
         gray_img = cv2.cvtColor(self.input_file, cv2.COLOR_BGR2GRAY)
+        # 適応的閾値処理
         binary_img = cv2.adaptiveThreshold(
             gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 255, 2
         )
-        modified_binary_img = cv2.medianBlur(binary_img, 9)
-        return modified_binary_img
+        # ガウシアンフィルタで画像の平滑化
+        size = (3, 3)
+        blur = cv2.GaussianBlur(binary_img, size, 0)
+        # 大津の手法を使った画像の２値化
+        _, th = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # 白黒反転
+        th = cv2.bitwise_not(th)
+        # 大津の手法を使った画像の２値化
+        _, th = cv2.threshold(th, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # 白黒反転で元に戻す
+        th = cv2.bitwise_not(th)
+        return th
 
     def noise_reduction(self, img):
         """
@@ -52,8 +63,8 @@ class GetReceiptContours:
         """
         輪郭の一覧を得る
         """
-        _, th1 = cv2.threshold(self.binary_img, 127, 255, cv2.THRESH_OTSU)
-        contours, _ = cv2.findContours(th1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # 輪郭取得
+        contours, _ = cv2.findContours(self.binary_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         # 面積が大きい順に並べ替える。
         contours = list(contours)
         contours.sort(key=cv2.contourArea, reverse=True)
@@ -62,11 +73,12 @@ class GetReceiptContours:
         # draw_contours_file = cv2.drawContours(
         #     copy_input_file, contours, -1, (0, 0, 255, 255), 10
         # )
+
         # cv2.imwrite(
         #     '{}/write_all_contours_{}.png'.format(
-        #         self.interim_path, self.input_filename
+        #         self.save_dir, self.input_filename
         #     ),
-        #     draw_contours_file,
+        #     copy_input_file,
         # )
         return contours
 
@@ -206,3 +218,8 @@ def main(input_path):
     geri = GetEachReceiptImg(input_path)
     trimmed_image_path = geri.projective_transformation()
     return trimmed_image_path
+
+
+# if __name__ == "__main__":
+#     input_path = ''
+#     main(input_path)

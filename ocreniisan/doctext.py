@@ -45,7 +45,7 @@ def draw_boxes(image, lines, color):
     return image
 
 
-def get_sorted_lines(image_file, threshold=20):
+def get_sorted_lines(image_file, threshold=18):
     """Boundingboxの左上の位置を参考に行ごとの文章にParseする
 
     Args:
