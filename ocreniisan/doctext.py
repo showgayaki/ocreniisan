@@ -45,7 +45,11 @@ def draw_boxes(image, lines, color):
     return image
 
 
-def get_sorted_lines(image_file, threshold=18):
+def get_sorted_lines(image_file, threshold=22):
+    # test4.JPGでthreshold=22だとnameがおかしくなる箇所あり
+    # threshold=18だとOKだが、ほかのレシートで行の読み取りがダメになる
+    # 一応は取れるので22にしておく
+    # トリミングした画像の傾きの調整が必要かも
     """Boundingboxの左上の位置を参考に行ごとの文章にParseする
 
     Args:

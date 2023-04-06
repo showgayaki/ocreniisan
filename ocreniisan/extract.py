@@ -1,4 +1,5 @@
 import re
+import math
 from statistics import mean
 from .store_dict import STORE_DICT
 
@@ -19,7 +20,6 @@ class Extract:
         subtotal = 0
 
         for line_index in range(len(self.lines)):
-            line_start_x = 0
             line_text = ''
 
             # 日付の下にレジ担当者の名前などが来ることがあるので、「date_line_index + 1」している
@@ -31,10 +31,6 @@ class Extract:
             for word_index in range(len(self.lines[line_index])):
                 # wordオブジェクトの[2]がテキスト
                 word = self.lines[line_index][word_index][2]
-
-                # 行開始x座標を取っておく。「商品名」行か「個数✖️単価」行かの判別に使う
-                if is_items_area and word_index == 0:
-                    line_start_x = self.lines[line_index][word_index][-1].vertices[0].x
 
                 # 1個前のword(商品名)の右端と今回のword(金額)の左端の距離が、ある程度離れて記載されている
                 if is_items_area or ('小計' in line_text) or ('合計' in line_text):
@@ -49,6 +45,7 @@ class Extract:
                     if line_text[-1] == ',' or line_text[-1] == '.' or word == '計':
                         line_text += word
                     else:
+                        line_text = line_text.replace(' ', '_')
                         line_text = '{} {}'.format(line_text, word)
                         distance_item_and_amount = 0
                 else:
@@ -81,8 +78,8 @@ class Extract:
                     response['subtotal'] = subtotal
                     subtotal = 0
 
-            if is_items_area:
-                item_amount_lines.append({'start_x': line_start_x, 'text': line_text})
+            if is_items_area and '小計' not in line_text:
+                item_amount_lines.append(line_text)
 
             if '合計' in line_text:
                 total = self.amount_str_to_int(line_text.split(' ')[-1])
@@ -93,13 +90,12 @@ class Extract:
             if 'total' in response:
                 break
 
-        print(item_amount_lines)
         items_list = self.items_amount(item_amount_lines, response['subtotal'], response['tax_total'])
         response['items'] = items_list
 
-        with open('key/file.json', 'w') as f:
-            import json
-            json.dump(response, f, indent=4, ensure_ascii=False)
+        # with open('key/file.json', 'w') as f:
+        #     import json
+        #     json.dump(response, f, indent=4, ensure_ascii=False)
 
         return response
 
@@ -111,40 +107,39 @@ class Extract:
         - 「小計」より前に記載されている
         - 数字である
         """
-        INDENT_BUFFER = 20
         items_amount_list = []
         item_name = ''
         amount = 0
-        # 行開始x座標の平均
-        line_start_x_ave = mean([line['start_x'] for line in amount_lines])
 
         for line in amount_lines:
-            print(line['text'])
             # 金額の記載があれば「商品名 1,000」の形で来るので、半角スペースでsplitできる
-            item_and_amount_splited = line['text'].split(' ')
+            item_and_amount_splited = line.split(' ')
 
-            # インデントされている場合は「個数✖️単価」になっているはずなので、前の行のitem_nameに足す
-            # すでにappendされている分をpop(削除)しておく
-            if line['start_x'] > line_start_x_ave + INDENT_BUFFER:
-                # 詳細(個数✖️単価)のあとに金額の記載があるかどうか
-                if self.amount_str_to_int(item_and_amount_splited[-1]):
-                    item_detail = ''.join(item_and_amount_splited[:-1])
-                else:
-                    item_detail = line['text']
-                item_name = '{} {}'.format(items_amount_list[-1]['name'], item_detail)
-                items_amount_list.pop()
+            if len(item_and_amount_splited) > 1:
+                item_name = ''.join(item_and_amount_splited[:-1])
             else:
-                # インデントされていない場合
-                # リスト長が1より大きい(金額の記載がある) splited_ex: ['商品名', '1,000']
-                if len(item_and_amount_splited) > 1:
-                    amount = self.amount_str_to_int(item_and_amount_splited[-1])
-                    # 金額が取れなかった場合は、商品名中のスペースなのでline['text']がそのままitem_nameになる
-                    if amount == 0:
-                        item_name = line['text']
-                    else:
-                        item_name = ' '.join(item_and_amount_splited[:-1])
-                else:
-                    item_name = line['text']
+                item_name = line
+
+            amount = self.amount_str_to_int(item_and_amount_splited[-1])
+            # 個数✖️単価の記載になっているか検証
+            item_count_and_amount = re.findall(r'\d+', item_name)
+            item_count_and_amount = [int(i) for i in item_count_and_amount]
+
+            if amount > 0:
+                item_name = ''.join(item_and_amount_splited[:-1])
+                # 今回の行の金額と個数✖️単価が等しければ、前の行には金額の記載がないはず
+                # item_nameを結合して、すでにappendした分は削除(pop)
+                if amount == math.prod(item_count_and_amount):
+                    item_name = '{} {}'.format(items_amount_list[-1]['name'], item_name)
+                    items_amount_list.pop()
+            else:
+                item_name = line
+                # 前の行の金額と今回の行の個数✖️単価が等しければ、前の行には金額が書かれているはず
+                # item_nameを結合して、すでにappendした分は削除(pop)
+                if items_amount_list[-1]['amount'] == math.prod(item_count_and_amount):
+                    item_name = '{} {}'.format(items_amount_list[-1]['name'], item_name)
+                    amount = items_amount_list[-1]['amount']
+                    items_amount_list.pop()
 
             if item_name:
                 # 税額の処理
@@ -160,6 +155,9 @@ class Extract:
                     'amount_tax_in': amount_tax_in,
                 })
 
+        # with open('key/item_list.json', 'w') as f:
+        #     import json
+        #     json.dump(items_amount_list, f, indent=4, ensure_ascii=False)
         return items_amount_list
 
     def amount_str_to_int(self, text):
