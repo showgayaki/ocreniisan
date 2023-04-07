@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile
 import shutil
 from datetime import datetime
 from pathlib import Path
+import cv2
 from . import trim, doctext
 from .extract import Extract
 
@@ -23,6 +24,10 @@ async def receipt_ocr(receiptImage: UploadFile):
     with open(original_image_path, 'wb+') as buffer:
         shutil.copyfileobj(receiptImage.file, buffer)
 
+    # 画像を圧縮
+    image = cv2.imread(original_image_path)
+    cv2.imwrite(original_image_path, image, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+
     # 画像からレシート部分をトリミング
     try:
         trimmed_image_path = trim.main(original_image_path)
@@ -32,7 +37,7 @@ async def receipt_ocr(receiptImage: UploadFile):
             'detail': str(e)
         }
 
-    ocred_filename = Path(trimmed_image_path).name.replace('.png', '_ocred.png')
+    ocred_filename = Path(trimmed_image_path).name.replace('.jpg', '_ocred.jpg')
     ocred_image_path = Path(image_save_dir).joinpath(ocred_filename)
     # OCR実行
     lines = doctext.render_doc_text(trimmed_image_path, ocred_image_path)

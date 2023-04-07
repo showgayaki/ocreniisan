@@ -78,7 +78,7 @@ class GetReceiptContours:
         #     '{}/write_all_contours_{}.png'.format(
         #         self.save_dir, self.input_filename
         #     ),
-        #     copy_input_file,
+        #     draw_contours_file,
         # )
         return contours
 
@@ -187,10 +187,11 @@ class GetEachReceiptImg(GetReceiptContours):
             self.input_file, M, (int(self.width), int(self.height))
         )
 
-        image_path = '{}/{}_{}_trimmed.png'.format(
+        image_path = '{}/{}_{}_trimmed.jpg'.format(
             self.save_dir, self.input_filename, receipt_no
         )
-        cv2.imwrite(image_path, dst)
+        # 画像を圧縮して保存
+        cv2.imwrite(image_path, dst, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
         return image_path
 
 

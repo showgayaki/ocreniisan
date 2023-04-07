@@ -133,3 +133,4 @@ key/
 *.jpg
 *.png
 store_dict.py
+.DS_Store

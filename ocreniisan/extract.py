@@ -1,6 +1,5 @@
 import re
 import math
-from statistics import mean
 from .store_dict import STORE_DICT
 
 
