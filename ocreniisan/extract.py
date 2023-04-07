@@ -67,8 +67,6 @@ class Extract:
             # 金額のみの行があれば、商品金額欄は終了とみなす
             if '小計' in line_text:
                 subtotal = self.amount_str_to_int(word)
-            elif is_items_area:
-                subtotal = self.amount_str_to_int(line_text)
 
             if subtotal > 0:
                 is_items_area = False
@@ -113,13 +111,15 @@ class Extract:
         for line in amount_lines:
             # 金額の記載があれば「商品名 1,000」の形で来るので、半角スペースでsplitできる
             item_and_amount_splited = line.split(' ')
+            amount = self.amount_str_to_int(item_and_amount_splited[-1])
 
-            if len(item_and_amount_splited) > 1:
+            # 金額が取れていればスペース前までがitem_name
+            # 取れなければ商品名中のスペースなので、lineがitem_name
+            if len(item_and_amount_splited) > 1 and amount > 0:
                 item_name = ''.join(item_and_amount_splited[:-1])
             else:
                 item_name = line
 
-            amount = self.amount_str_to_int(item_and_amount_splited[-1])
             # 個数✖️単価の記載になっているか検証
             item_count_and_amount = re.findall(r'\d+', item_name)
             item_count_and_amount = [int(i) for i in item_count_and_amount]

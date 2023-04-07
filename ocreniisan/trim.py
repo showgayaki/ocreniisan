@@ -131,7 +131,7 @@ class GetReceiptContours:
             copy_input_file, self.rectangle_contours, -1, (0, 0, 255, 255), 10
         )
         cv2.imwrite(
-            '{}/write_contours_{}.png'.format(self.save_dir, self.input_filename),
+            '{}/write_contours_{}.jpg'.format(self.save_dir, self.input_filename),
             draw_contours_file,
         )
 

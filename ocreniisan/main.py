@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 import cv2
 from . import trim, doctext
+from .correct import Correct
 from .extract import Extract
 
 
@@ -39,15 +40,30 @@ async def receipt_ocr(receiptImage: UploadFile):
 
     ocred_filename = Path(trimmed_image_path).name.replace('.jpg', '_ocred.jpg')
     ocred_image_path = Path(image_save_dir).joinpath(ocred_filename)
-    # OCR実行
+
+    # 文字列からレシートの傾きを求めるために、いったんOCR実行
     lines = doctext.render_doc_text(trimmed_image_path, ocred_image_path)
+
+    # レシートの傾きを求めて、回転させた画像を保存
+    correct = Correct(lines)
+    rotated_image_path = correct.rotate_image(trimmed_image_path)
+
+    # 回転させた画像で、再度OCR実行
+    lines = doctext.render_doc_text(rotated_image_path, ocred_image_path)
+
     # 画像ファイル削除
     for f in image_save_dir.iterdir():
         f.unlink()
 
     # 情報抽出
     ext = Extract(lines)
-    response = ext.extract_info()
+    try:
+        response = ext.extract_info()
+    except Exception as e:
+        return {
+            'error': '情報抽出中に何かおかしなことが起きました。',
+            'detail': str(e)
+        }
     return response
 
 
