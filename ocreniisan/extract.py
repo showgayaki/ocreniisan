@@ -20,19 +20,13 @@ class Extract:
 
         for line_index in range(len(self.lines)):
             line_text = ''
-
-            # 日付の下にレジ担当者の名前などが来ることがあるので、「date_line_index + 1」している
-            # お店(レシート)によってはダメかも
-            if line_index > date_line_index + 1:
-                is_items_area = True
-
             # 行のwordごとの処理
             for word_index in range(len(self.lines[line_index])):
                 # wordオブジェクトの[2]がテキスト
                 word = self.lines[line_index][word_index][2]
 
                 # 1個前のword(商品名)の右端と今回のword(金額)の左端の距離が、ある程度離れて記載されている
-                if is_items_area or ('小計' in line_text) or ('合計' in line_text):
+                if word_index > 0:
                     distance_item_and_amount = self.lines[line_index][word_index][-1].vertices[0].x - self.lines[line_index][word_index - 1][-1].vertices[1].x
 
                 if distance_item_and_amount > distance_threshold:
@@ -44,11 +38,21 @@ class Extract:
                     if line_text[-1] == ',' or line_text[-1] == '.' or word == '計':
                         line_text += word
                     else:
-                        line_text = line_text.replace(' ', '_')
-                        line_text = '{} {}'.format(line_text, word)
+                        # line_text = line_text.replace(' ', '_')
+                        line_text = '{}_{}'.format(line_text, word)
                         distance_item_and_amount = 0
                 else:
                     line_text += word
+
+            # 商品ごとの金額記載エリアに入ったかの検証
+            line_text = line_text.replace('¥', '')
+            line_text_splited = line_text.split('_')
+            # 時間の記載箇所に数字が含まれているため、日付行より下の行から検証を開始する
+            if line_index > date_line_index:
+                if 'subtotal' not in response and not is_items_area and len(line_text_splited) > 1:
+                    item_amount = self.amount_str_to_int(line_text_splited[-1])
+                    if item_amount:
+                        is_items_area = True
 
             # 店舗名を抜き取り
             if 'store' not in response or response['store'] is None:
@@ -63,10 +67,9 @@ class Extract:
                 response['date'] = payment_date
                 date_line_index = line_index
 
-            # 「小計 ¥1,000」が1行と認識されず、「¥1,000」が先に認識されてしまうことがあったので
-            # 金額のみの行があれば、商品金額欄は終了とみなす
+            # 小計を抜き取り
             if '小計' in line_text:
-                subtotal = self.amount_str_to_int(word)
+                subtotal = self.amount_str_to_int(line_text_splited[-1])
 
             if subtotal > 0:
                 is_items_area = False
@@ -79,7 +82,7 @@ class Extract:
                 item_amount_lines.append(line_text)
 
             if '合計' in line_text:
-                total = self.amount_str_to_int(line_text.split(' ')[-1])
+                total = self.amount_str_to_int(line_text_splited[-1])
                 response['tax_total'] = total - response['subtotal']
                 response['total'] = total
 
@@ -109,8 +112,8 @@ class Extract:
         amount = 0
 
         for line in amount_lines:
-            # 金額の記載があれば「商品名 1,000」の形で来るので、半角スペースでsplitできる
-            item_and_amount_splited = line.split(' ')
+            # 金額の記載があれば「商品名_1,000」の形で来るので、「_」でsplitできる
+            item_and_amount_splited = line.split('_')
             amount = self.amount_str_to_int(item_and_amount_splited[-1])
 
             # 金額が取れていればスペース前までがitem_name
@@ -135,7 +138,7 @@ class Extract:
                 item_name = line
                 # 前の行の金額と今回の行の個数✖️単価が等しければ、前の行には金額が書かれているはず
                 # item_nameを結合して、すでにappendした分は削除(pop)
-                if items_amount_list[-1]['amount'] == math.prod(item_count_and_amount):
+                if len(items_amount_list) and items_amount_list[-1]['amount'] == math.prod(item_count_and_amount):
                     item_name = '{} {}'.format(items_amount_list[-1]['name'], item_name)
                     amount = items_amount_list[-1]['amount']
                     items_amount_list.pop()
@@ -174,7 +177,7 @@ class Extract:
     def payment_date(self, text):
         REGEX = r'[12]\d{3}[/\-年 ](0?[1-9]|1[0-2])[/\-月 ]([12][0-9]|3[01]|0?[0-9])日?'
         p_date = None
-        search = re.search(REGEX, text)
+        search = re.search(REGEX, text.replace('_', ''))
         if search:
             p_date = search.group().translate(str.maketrans({'年': '-', '月': '-', '日': None, '/': '-'}))
         return p_date

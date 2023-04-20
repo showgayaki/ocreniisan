@@ -15,8 +15,11 @@ app = FastAPI(root_path='/ocreniisan', docs_url='/ocreniisan/docs')
 async def receipt_ocr(receiptImage: UploadFile):
     # 画像保存用ディレクトリがなかったら作成
     image_save_dir = Path(__file__).parent.joinpath('images').resolve()
+    error_dir = image_save_dir.joinpath('error')
     if not image_save_dir.is_dir():
         image_save_dir.mkdir()
+    if not error_dir.is_dir():
+        error_dir.mkdir()
 
     # アップロードされた画像を保存
     dt_now = datetime.now()
@@ -33,6 +36,9 @@ async def receipt_ocr(receiptImage: UploadFile):
     try:
         trimmed_image_path = trim.main(original_image_path)
     except Exception as e:
+        # エラー画像保存
+        error_image_path = str(error_dir.joinpath(file_name.replace('.jpg', '_trim-error.jpg')))
+        shutil.move(original_image_path, error_image_path)
         return {
             'error': 'レシートを読み取れませんでした。\n写真を撮り直してください。',
             'detail': str(e)
@@ -43,27 +49,30 @@ async def receipt_ocr(receiptImage: UploadFile):
 
     # 文字列からレシートの傾きを求めるために、いったんOCR実行
     lines = doctext.render_doc_text(trimmed_image_path, ocred_image_path)
-
     # レシートの傾きを求めて、回転させた画像を保存
     correct = Correct(lines)
     rotated_image_path = correct.rotate_image(trimmed_image_path)
-
     # 回転させた画像で、再度OCR実行
     lines = doctext.render_doc_text(rotated_image_path, ocred_image_path)
-
-    # 画像ファイル削除
-    for f in image_save_dir.iterdir():
-        f.unlink()
 
     # 情報抽出
     ext = Extract(lines)
     try:
         response = ext.extract_info()
     except Exception as e:
+        # エラー画像保存
+        error_image_path = str(error_dir.joinpath(file_name.replace('.jpg', '_ocr-error.jpg')))
+        shutil.move(original_image_path, error_image_path)
         return {
             'error': '情報抽出中に何かおかしなことが起きました。',
             'detail': str(e)
         }
+
+    # 画像ファイル削除
+    for f in image_save_dir.iterdir():
+        if f.is_file():
+            f.unlink()
+
     return response
 
 
