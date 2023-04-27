@@ -39,9 +39,13 @@ async def receipt_ocr(receiptImage: UploadFile):
         # エラー画像保存
         error_image_path = str(error_dir.joinpath(file_name.replace('.jpg', '_trim-error.jpg')))
         shutil.move(original_image_path, error_image_path)
+
+        # エラー文の最終行を返す
+        import traceback
+        t = traceback.format_exception_only(type(e), e)
         return {
             'error': 'レシートを読み取れませんでした。\n写真を撮り直してください。',
-            'detail': str(e)
+            'detail': ''.join(t)
         }
 
     ocred_filename = Path(trimmed_image_path).name.replace('.jpg', '_ocred.jpg')
@@ -63,9 +67,13 @@ async def receipt_ocr(receiptImage: UploadFile):
         # エラー画像保存
         error_image_path = str(error_dir.joinpath(file_name.replace('.jpg', '_ocr-error.jpg')))
         shutil.move(original_image_path, error_image_path)
+
+        # エラー文の最終行を返す
+        import traceback
+        t = traceback.format_exception_only(type(e), e)
         return {
             'error': '情報抽出中に何かおかしなことが起きました。',
-            'detail': str(e)
+            'detail': ''.join(t)
         }
 
     # 画像ファイル削除
