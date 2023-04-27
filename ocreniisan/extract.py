@@ -41,6 +41,10 @@ class Extract:
                         # line_text = line_text.replace(' ', '_')
                         line_text = '{}_{}'.format(line_text, word)
                         distance_item_and_amount = 0
+                        # まいばすけっと対策：商品金額のあとに「A」という文字列が付いていた
+                        # そのため、金額が取れたら行をbreakする
+                        if line_index > date_line_index and self.amount_str_to_int(word):
+                            break
                 else:
                     line_text += word
 
