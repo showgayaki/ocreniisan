@@ -63,7 +63,7 @@ class Extract:
                 response['store'] = self.store_name(line_text)
             else:
                 # 店名が入ったらサブカテゴリを入れておく
-                response['sub_category'] = STORE_DICT[response['store']]
+                response['subcategory'] = STORE_DICT[response['store']]
 
             # 日付を抜き取り
             payment_date = self.payment_date(line_text)
