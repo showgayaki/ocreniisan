@@ -11,6 +11,7 @@ class Extract:
         distance_threshold = 30  # 商品名と金額の距離の閾値(これ以上離れていたら金額とみなす)
         response = {}
         line_text = ''
+        last_line_text = ''
         word = ''
         distance_item_and_amount = 0
         is_items_area = False
@@ -19,6 +20,7 @@ class Extract:
         subtotal = 0
 
         for line_index in range(len(self.lines)):
+            last_line_text = line_text
             line_text = ''
             # 行のwordごとの処理
             for word_index in range(len(self.lines[line_index])):
@@ -57,6 +59,15 @@ class Extract:
                     item_amount = self.amount_str_to_int(line_text_splited[-1])
                     if item_amount:
                         is_items_area = True
+                        # ------
+                        # 商品名
+                        # 個数✖️単価 合計
+                        # ------
+                        # となっているレシートの
+                        # 商品一覧の最初の行に、複数購入のものが来た場合用の処理
+                        # 前の行をappendしておく(*1)
+                        if len(item_amount_lines) == 0:
+                            item_amount_lines.append(last_line_text)
 
             # 店舗名を抜き取り
             if 'store' not in response or response['store'] is None:
@@ -76,6 +87,7 @@ class Extract:
                 subtotal = self.amount_str_to_int(line_text_splited[-1])
 
             if subtotal > 0:
+                # 小計が取れたら初期化
                 is_items_area = False
                 date_line_index = 9999
                 if 'subtotal' not in response:
@@ -86,6 +98,10 @@ class Extract:
                 item_amount_lines.append(line_text)
 
             if '合計' in line_text:
+                # 小計がないレシートもあるようなので、ここでも初期化
+                is_items_area = False
+                date_line_index = 9999
+
                 total = self.amount_str_to_int(line_text_splited[-1])
                 response['tax_total'] = total - response['subtotal']
                 response['total'] = total
@@ -120,8 +136,8 @@ class Extract:
             item_and_amount_splited = line.split('_')
             amount = self.amount_str_to_int(item_and_amount_splited[-1])
 
-            # 金額が取れていればスペース前までがitem_name
-            # 取れなければ商品名中のスペースなので、lineがitem_name
+            # 金額が取れていればアンダースコア前までがitem_name
+            # 金額が取れていなければ、商品名中のアンダースコアなので、lineがitem_name
             if len(item_and_amount_splited) > 1 and amount > 0:
                 item_name = ''.join(item_and_amount_splited[:-1])
             else:
@@ -132,22 +148,35 @@ class Extract:
             item_count_and_amount = [int(i) for i in item_count_and_amount]
 
             if amount > 0:
-                item_name = ''.join(item_and_amount_splited[:-1])
                 # 今回の行の金額と個数✖️単価が等しければ、前の行には金額の記載がないはず
                 # item_nameを結合して、すでにappendした分は削除(pop)
                 if amount == math.prod(item_count_and_amount):
                     item_name = '{} {}'.format(items_amount_list[-1]['name'], item_name)
                     items_amount_list.pop()
             else:
-                item_name = line
                 # 前の行の金額と今回の行の個数✖️単価が等しければ、前の行には金額が書かれているはず
                 # item_nameを結合して、すでにappendした分は削除(pop)
-                if len(items_amount_list) and items_amount_list[-1]['amount'] == math.prod(item_count_and_amount):
+                print(item_name)
+                if len(items_amount_list) > 0 and items_amount_list[-1]['amount'] == math.prod(item_count_and_amount):
                     item_name = '{} {}'.format(items_amount_list[-1]['name'], item_name)
                     amount = items_amount_list[-1]['amount']
                     items_amount_list.pop()
+                elif len(items_amount_list) == 0:
+                    # (*1)の場合の最初の処理(担当者記載行を想定)
+                    # 金額部分はすべて0でappendしておく
+                    items_amount_list.append({
+                        'name': item_name,
+                        'amount': 0,
+                        'tax': 0,
+                        'amount_tax_in': 0,
+                    })
+                    continue
 
             if item_name:
+                # 担当者記載行は削除
+                if (len(items_amount_list) > 0
+                        and items_amount_list[-1]['amount'] == 0 and items_amount_list[-1]['tax'] == 0 and items_amount_list[-1]['amount_tax_in'] == 0):
+                    items_amount_list.pop()
                 # 税額の処理
                 # 軽減税率の考慮は無理なので、税総額を商品金額で按分する
                 # テキトーに丸めただけ、数円のズレは諦める

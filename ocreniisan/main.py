@@ -43,6 +43,7 @@ async def receipt_ocr(receiptImage: UploadFile):
         # エラー文の最終行を返す
         import traceback
         t = traceback.format_exception_only(type(e), e)
+        print(traceback.format_exc())
         return {
             'error': 'レシートを読み取れませんでした。\n写真を撮り直してください。',
             'detail': ''.join(t)
@@ -71,6 +72,7 @@ async def receipt_ocr(receiptImage: UploadFile):
         # エラー文の最終行を返す
         import traceback
         t = traceback.format_exception_only(type(e), e)
+        print(traceback.format_exc())
         return {
             'error': '情報抽出中に何かおかしなことが起きました。',
             'detail': ''.join(t)
