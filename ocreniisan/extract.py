@@ -40,7 +40,6 @@ class Extract:
                     if line_text[-1] == ',' or line_text[-1] == '.' or word == '計':
                         line_text += word
                     else:
-                        # line_text = line_text.replace(' ', '_')
                         line_text = '{}_{}'.format(line_text, word)
                         distance_item_and_amount = 0
                         # まいばすけっと対策：商品金額のあとに「A」という文字列が付いていた
@@ -156,7 +155,6 @@ class Extract:
             else:
                 # 前の行の金額と今回の行の個数✖️単価が等しければ、前の行には金額が書かれているはず
                 # item_nameを結合して、すでにappendした分は削除(pop)
-                print(item_name)
                 if len(items_amount_list) > 0 and items_amount_list[-1]['amount'] == math.prod(item_count_and_amount):
                     item_name = '{} {}'.format(items_amount_list[-1]['name'], item_name)
                     amount = items_amount_list[-1]['amount']
