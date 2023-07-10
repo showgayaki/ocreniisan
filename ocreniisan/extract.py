@@ -26,6 +26,7 @@ class Extract:
             for word_index in range(len(self.lines[line_index])):
                 # wordオブジェクトの[2]がテキスト
                 word = self.lines[line_index][word_index][2]
+                print(word)
 
                 # 1個前のword(商品名)の右端と今回のword(金額)の左端の距離が、ある程度離れて記載されている
                 if word_index > 0:
@@ -43,8 +44,8 @@ class Extract:
                         line_text = '{}_{}'.format(line_text, word)
                         distance_item_and_amount = 0
                         # まいばすけっと対策：商品金額のあとに「A」という文字列が付いていた
-                        # そのため、金額が取れたら行をbreakする
-                        if line_index > date_line_index and self.amount_str_to_int(word):
+                        # そのため、行の最終単語が数字でない場合は行をbreakする
+                        if word_index == len(self.lines[line_index]) - 1 and not self.amount_str_to_int(word):
                             break
                 else:
                     line_text += word
