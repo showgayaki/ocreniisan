@@ -17,7 +17,6 @@ class Extract:
         is_items_area = False
         item_amount_lines = []
         date_line_index = 9999  # テキトーな大きい数字を入れておく
-        subtotal = 0
 
         for line_index in range(len(self.lines)):
             last_line_text = line_text
@@ -26,7 +25,6 @@ class Extract:
             for word_index in range(len(self.lines[line_index])):
                 # wordオブジェクトの[2]がテキスト
                 word = self.lines[line_index][word_index][2]
-                print(word)
 
                 # 1個前のword(商品名)の右端と今回のword(金額)の左端の距離が、ある程度離れて記載されている
                 if word_index > 0:
@@ -45,7 +43,8 @@ class Extract:
                         distance_item_and_amount = 0
                         # まいばすけっと対策：商品金額のあとに「A」という文字列が付いていた
                         # そのため、行の最終単語が数字でない場合は行をbreakする
-                        if word_index == len(self.lines[line_index]) - 1 and not self.amount_str_to_int(word):
+                        if is_items_area and (word_index == len(self.lines[line_index]) - 1) and (self.amount_str_to_int(word) == 0):
+                            line_text = '_'.join(line_text.split('_')[:-1])
                             break
                 else:
                     line_text += word
@@ -55,7 +54,7 @@ class Extract:
             line_text_splited = line_text.split('_')
             # 時間の記載箇所に数字が含まれているため、日付行より下の行から検証を開始する
             if line_index > date_line_index:
-                if 'subtotal' not in response and not is_items_area and len(line_text_splited) > 1:
+                if not is_items_area and len(line_text_splited) > 1:
                     item_amount = self.amount_str_to_int(line_text_splited[-1])
                     if item_amount:
                         is_items_area = True
@@ -84,27 +83,30 @@ class Extract:
 
             # 小計を抜き取り
             if '小計' in line_text:
-                subtotal = self.amount_str_to_int(line_text_splited[-1])
-
-            if subtotal > 0:
-                # 小計が取れたら初期化
+                # 小計が記載されていたら、商品詳細エリア終了
                 is_items_area = False
                 date_line_index = 9999
                 if 'subtotal' not in response:
-                    response['subtotal'] = subtotal
-                    subtotal = 0
-
-            if is_items_area and '小計' not in line_text:
-                item_amount_lines.append(line_text)
+                    response['subtotal'] = self.amount_str_to_int(line_text_splited[-1])
 
             if '合計' in line_text:
                 # 小計がないレシートもあるようなので、ここでも初期化
                 is_items_area = False
                 date_line_index = 9999
 
-                total = self.amount_str_to_int(line_text_splited[-1])
-                response['tax_total'] = total - response['subtotal']
-                response['total'] = total
+                response['total'] = self.amount_str_to_int(line_text_splited[-1])
+
+                # 小計がないレシートはおそらく税込表示なので、小計と税合計はnullにしておく
+                if 'subtotal' not in response:
+                    response['subtotal'] = None
+                    response['tax_total'] = None
+                else:
+                    response['tax_total'] = response['total'] - response['subtotal']
+            elif is_items_area:
+                if '割引' in line_text and '金額' in line_text:
+                    continue
+                elif '小計' not in line_text:
+                    item_amount_lines.append(line_text)
 
             # 合計が入ったら以降の行は見ません
             if 'total' in response:
@@ -117,6 +119,7 @@ class Extract:
         #     import json
         #     json.dump(response, f, indent=4, ensure_ascii=False)
 
+        print(response)
         return response
 
     def items_amount(self, amount_lines, subtotal, tax_total):
@@ -138,7 +141,7 @@ class Extract:
 
             # 金額が取れていればアンダースコア前までがitem_name
             # 金額が取れていなければ、商品名中のアンダースコアなので、lineがitem_name
-            if len(item_and_amount_splited) > 1 and amount > 0:
+            if len(item_and_amount_splited) > 1 and amount != 0:
                 item_name = ''.join(item_and_amount_splited[:-1])
             else:
                 item_name = line
@@ -174,13 +177,17 @@ class Extract:
             if item_name:
                 # 担当者記載行は削除
                 if (len(items_amount_list) > 0
-                        and items_amount_list[-1]['amount'] == 0 and items_amount_list[-1]['tax'] == 0 and items_amount_list[-1]['amount_tax_in'] == 0):
+                        and items_amount_list[-1]['amount'] == 0):  # and items_amount_list[-1]['tax'] == 0 and items_amount_list[-1]['amount_tax_in'] == 0):
                     items_amount_list.pop()
                 # 税額の処理
                 # 軽減税率の考慮は無理なので、税総額を商品金額で按分する
                 # テキトーに丸めただけ、数円のズレは諦める
-                tax_per_item = round(tax_total * round(amount / subtotal, 2))
-                amount_tax_in = amount + tax_per_item
+                if subtotal is None:
+                    tax_per_item = None
+                    amount_tax_in = amount
+                else:
+                    tax_per_item = round(tax_total * round(amount / subtotal, 2))
+                    amount_tax_in = amount + tax_per_item
 
                 items_amount_list.append({
                     'name': item_name,
