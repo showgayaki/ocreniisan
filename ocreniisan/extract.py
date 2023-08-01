@@ -99,9 +99,6 @@ class Extract:
                 # 小計がないレシートはおそらく税込表示なので、小計と税合計はnullにしておく
                 if 'subtotal' not in response:
                     response['subtotal'] = None
-                    response['tax_total'] = None
-                else:
-                    response['tax_total'] = response['total'] - response['subtotal']
             elif is_items_area:
                 if '割引' in line_text and '金額' in line_text:
                     continue
@@ -112,7 +109,7 @@ class Extract:
             if 'total' in response:
                 break
 
-        items_list = self.items_amount(item_amount_lines, response['subtotal'], response['tax_total'])
+        items_list = self.items_amount(item_amount_lines)
         response['items'] = items_list
 
         # with open('key/file.json', 'w') as f:
@@ -122,7 +119,7 @@ class Extract:
         print(response)
         return response
 
-    def items_amount(self, amount_lines, subtotal, tax_total):
+    def items_amount(self, amount_lines):
         """
         商品ごとの金額を取得する。
         下記を満たしていれば、商品の金額が書かれているはず。
@@ -169,31 +166,20 @@ class Extract:
                     items_amount_list.append({
                         'name': item_name,
                         'amount': 0,
-                        'tax': 0,
-                        'amount_tax_in': 0,
                     })
                     continue
 
             if item_name:
                 # 担当者記載行は削除
                 if (len(items_amount_list) > 0
-                        and items_amount_list[-1]['amount'] == 0):  # and items_amount_list[-1]['tax'] == 0 and items_amount_list[-1]['amount_tax_in'] == 0):
+                        and items_amount_list[-1]['amount'] == 0):
                     items_amount_list.pop()
-                # 税額の処理
-                # 軽減税率の考慮は無理なので、税総額を商品金額で按分する
-                # テキトーに丸めただけ、数円のズレは諦める
-                if subtotal is None:
-                    tax_per_item = None
-                    amount_tax_in = amount
-                else:
-                    tax_per_item = round(tax_total * round(amount / subtotal, 2))
-                    amount_tax_in = amount + tax_per_item
 
                 items_amount_list.append({
                     'name': item_name,
                     'amount': amount,
-                    'tax': tax_per_item,
-                    'amount_tax_in': amount_tax_in,
+                    # 'tax': tax_per_item,
+                    # 'amount_tax_in': amount_tax_in,
                 })
 
         # with open('key/item_list.json', 'w') as f:
