@@ -12,7 +12,7 @@ app = FastAPI(root_path='/ocreniisan', docs_url='/ocreniisan/docs')
 
 
 @app.post('/ocreniisan')
-async def receipt_ocr(receiptImage: UploadFile):
+async def receipt_ocr(receiptImage: UploadFile, trimmed: bool = False):
     # 画像保存用ディレクトリがなかったら作成
     image_save_dir = Path(__file__).parent.joinpath('images').resolve()
     error_dir = image_save_dir.joinpath('error')
@@ -32,22 +32,27 @@ async def receipt_ocr(receiptImage: UploadFile):
     image = cv2.imread(original_image_path)
     cv2.imwrite(original_image_path, image, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
 
-    # 画像からレシート部分をトリミング
-    try:
-        trimmed_image_path = trim.main(original_image_path)
-    except Exception as e:
-        # エラー画像保存
-        error_image_path = str(error_dir.joinpath(file_name.replace('.jpg', '_trim-error.jpg')))
-        shutil.move(original_image_path, error_image_path)
+    if trimmed:
+        # トリミングされてたらオリジナル画像をそのまま渡す
+        trimmed_image_path = original_image_path
+    else:
+        # 画像からレシート部分をトリミング
+        try:
+            trimmed_image_path = trim.main(original_image_path)
+        except Exception as e:
+            # エラー画像保存
+            error_image_path = str(error_dir.joinpath(file_name.replace('.jpg', '_trim-error.jpg')))
+            shutil.move(original_image_path, error_image_path)
 
-        # エラー文の最終行を返す
-        import traceback
-        t = traceback.format_exception_only(type(e), e)
-        print(traceback.format_exc())
-        return {
-            'error': 'レシートを読み取れませんでした。\n写真を撮り直してください。',
-            'detail': ''.join(t)
-        }
+            # エラー全文を返す
+            import traceback
+            t = traceback.format_exception_only(type(e), e)
+            print(traceback.format_exc())
+            return {
+                'error': 'trim',
+                'message': 'レシートを読み取れませんでした。\n写真を撮り直してください。',
+                'detail': ''.join(t)
+            }
 
     ocred_filename = Path(trimmed_image_path).name.replace('.jpg', '_ocred.jpg')
     ocred_image_path = Path(image_save_dir).joinpath(ocred_filename)
@@ -69,12 +74,13 @@ async def receipt_ocr(receiptImage: UploadFile):
         error_image_path = str(error_dir.joinpath(file_name.replace('.jpg', '_ocr-error.jpg')))
         shutil.move(original_image_path, error_image_path)
 
-        # エラー文の最終行を返す
+        # エラー全文を返す
         import traceback
         t = traceback.format_exception_only(type(e), e)
         print(traceback.format_exc())
         return {
-            'error': '情報抽出中に何かおかしなことが起きました。',
+            'error': 'extract',
+            'message': '情報抽出中に何かおかしなことが起きました。',
             'detail': ''.join(t)
         }
 

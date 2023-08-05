@@ -178,8 +178,6 @@ class Extract:
                 items_amount_list.append({
                     'name': item_name,
                     'amount': amount,
-                    # 'tax': tax_per_item,
-                    # 'amount_tax_in': amount_tax_in,
                 })
 
         # with open('key/item_list.json', 'w') as f:
