@@ -8,10 +8,10 @@ from .correct import Correct
 from .extract import Extract
 
 
-app = FastAPI(root_path='/ocreniisan', docs_url='/ocreniisan/docs')
+app = FastAPI(root_path='/ocreniisan', docs_url='/docs')
 
 
-@app.post('/ocreniisan')
+@app.post('/')
 async def receipt_ocr(receiptImage: UploadFile, trimmed: bool = False):
     # 画像保存用ディレクトリがなかったら作成
     image_save_dir = Path(__file__).parent.joinpath('images').resolve()
