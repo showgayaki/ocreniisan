@@ -1,3 +1,13 @@
+FROM gcr.io/distroless/python3-debian11 AS base
+ARG TARGETARCH
+
+FROM base AS amd64
+ENV ARCH x86_64
+
+FROM base AS arm64
+ENV ARCH aarch64
+
+
 FROM python:3.9-slim-buster AS build
 
 # Install OpenCV's runtime dependencies
@@ -12,10 +22,7 @@ RUN python -m pip install --upgrade pip setuptools \
 && pip install --no-cache-dir -r requirements.txt
 
 
-FROM gcr.io/distroless/python3-debian11
-
-# x86_64 or aarch64
-ARG ARCH
+FROM ${TARGETARCH} AS prod
 
 # OpenCVに必要なファイルコピー
 COPY --from=build /lib/${ARCH}-linux-gnu/libm-2.28.so /lib/${ARCH}-linux-gnu/libm-2.28.so
