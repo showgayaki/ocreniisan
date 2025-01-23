@@ -1,8 +1,10 @@
-from enum import Enum
+from logging import getLogger
+from pathlib import Path
+from google.cloud import vision
 import io
 
-from google.cloud import vision
-from PIL import Image, ImageDraw
+from app.core.config import ConfigManager
+from app.utils.rotate import rotation_degree, rotate_image
 
 
 """
@@ -11,41 +13,26 @@ https://ossyaritoori.hatenablog.com/entry/2022/08/06/%E3%82%B9%E3%82%AD%E3%83%A3
 """
 
 
-class FeatureType(Enum):
-    PAGE = 1
-    BLOCK = 2
-    PARA = 3
-    WORD = 4
-    SYMBOL = 5
+logger = getLogger('ocr')
+config = ConfigManager().config
 
 
-def draw_boxes(image, lines, color):
-    """Draw a border around the image using the hints in the vector list."""
-    draw = ImageDraw.Draw(image)
+def exec_ocr(image_file_path: Path) -> list:
+    # 文字列からレシートの傾きを求めるために、いったんOCR実行
+    logger.info('Run OCR.')
+    lines = _get_sorted_lines(image_file_path)
 
-    for line in lines:
-        draw.polygon(
-            [
-                # top left
-                line[0][-1].vertices[0].x,
-                line[0][-1].vertices[0].y,
-                # top right
-                line[-1][-1].vertices[1].x,
-                line[-1][-1].vertices[1].y,
-                # bottom right
-                line[-1][-1].vertices[2].x,
-                line[-1][-1].vertices[2].y,
-                # bottom left
-                line[0][-1].vertices[3].x,
-                line[0][-1].vertices[3].y,
-            ],
-            None,
-            color,
-        )
-    return image
+    # レシートの傾きを求めて、回転させた画像を保存
+    rotation_angle = rotation_degree(lines)
+    rotated_image_path = rotate_image(rotation_angle, image_file_path)
+    # 回転させた画像で、再度OCR実行
+    logger.info('Run OCR after rotation.')
+    lines = _get_sorted_lines(rotated_image_path)
+
+    return lines
 
 
-def get_sorted_lines(image_file, threshold=20):
+def _get_sorted_lines(image_file: Path, threshold=20) -> list:
     """Boundingboxの左上の位置を参考に行ごとの文章にParseする
 
     Args:
@@ -55,12 +42,12 @@ def get_sorted_lines(image_file, threshold=20):
     Returns:
         lines: list of [x, y, text, word.boundingbox]
     """
-    with io.open(image_file, "rb") as image_file:
-        content = image_file.read()
+    with io.open(str(image_file), "rb") as f:
+        content = f.read()
 
     image = vision.Image(content=content)
     client = vision.ImageAnnotatorClient()
-    response = client.document_text_detection(image=image)
+    response = client.document_text_detection(image=image)  # type: ignore
     document = response.full_text_annotation
 
     # テキスト抽出とソート
@@ -96,18 +83,5 @@ def get_sorted_lines(image_file, threshold=20):
         line.append(bound)
     line.sort(key=lambda x: x[0])
     lines.append(line)
-
-    return lines
-
-
-def render_doc_text(filein, fileout):
-    lines = get_sorted_lines(filein)
-    image = Image.open(filein)
-
-    draw_boxes(image, lines, "green")
-    if fileout != 0:
-        image.save(fileout)
-    else:
-        image.show()
 
     return lines

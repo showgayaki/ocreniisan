@@ -1,3 +1,5 @@
+from logging import getLogger
+from pathlib import Path
 import cv2
 import math
 import numpy as np
@@ -5,6 +7,7 @@ import os
 import sys
 import re
 
+from app.core.config import ConfigManager
 
 """
 https://yrarchi.net/receipt_ocr/
@@ -13,12 +16,19 @@ https://github.com/yrarchi/household_accounts
 """
 
 
+logger = getLogger('ocr')
+config = ConfigManager().config
+
+
+def exec_trim(input_path: str) -> Path:
+    logger.info('trimming...')
+    GetReceiptContours(input_path)
+    geri = GetEachReceiptImg(input_path)
+    return geri.projective_transformation()
+
+
 class GetReceiptContours:
     def __init__(self, input_path):
-        self.save_dir = os.path.join(os.path.dirname(__file__), 'images')
-        if not os.path.isdir(self.save_dir):
-            os.mkdir(self.save_dir)
-
         self.input_file = cv2.imread(input_path)
         self.input_filename = os.path.splitext(os.path.basename(input_path))[0]
         self.height, self.width, _ = self.input_file.shape
@@ -76,7 +86,7 @@ class GetReceiptContours:
 
         # cv2.imwrite(
         #     '{}/write_all_contours_{}.png'.format(
-        #         self.save_dir, self.input_filename
+        #         config.IMAGE_SAVE_DIR, self.input_filename
         #     ),
         #     draw_contours_file,
         # )
@@ -131,7 +141,7 @@ class GetReceiptContours:
             copy_input_file, self.rectangle_contours, -1, (0, 0, 255, 255), 10
         )
         cv2.imwrite(
-            '{}/write_contours_{}.jpg'.format(self.save_dir, self.input_filename),
+            '{}/write_contours_{}.jpg'.format(config.IMAGE_SAVE_DIR, self.input_filename),
             draw_contours_file,
         )
 
@@ -178,20 +188,19 @@ class GetEachReceiptImg(GetReceiptContours):
         return width, height
 
     def projective_transformation(self, receipt_no=0):
-        pts_before = np.float32(self.sorted_corner_list)
-        pts_after = np.float32(
-            [[0, self.height], [0, 0], [self.width, 0], [self.width, self.height]]
+        pts_before = np.array(self.sorted_corner_list, dtype=np.float32)
+        pts_after = np.array(
+            [[0, self.height], [0, 0], [self.width, 0], [self.width, self.height]], dtype=np.float32
         )
-        M = cv2.getPerspectiveTransform(pts_before, pts_after)
-        dst = cv2.warpPerspective(
-            self.input_file, M, (int(self.width), int(self.height))
-        )
+        M = cv2.getPerspectiveTransform(pts_before, pts_after)  # type: ignore
+        dst = cv2.warpPerspective(self.input_file, M, (int(self.width), int(self.height)))
 
         image_path = '{}/{}_{}_trimmed.jpg'.format(
-            self.save_dir, self.input_filename, receipt_no
+            config.IMAGE_SAVE_DIR, self.input_filename, receipt_no
         )
+        image_path = Path(image_path).resolve()
         # 画像を圧縮して保存
-        cv2.imwrite(image_path, dst, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+        cv2.imwrite(str(image_path), dst, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
         return image_path
 
 
@@ -211,16 +220,3 @@ def get_input_path_list(relative_path, extension):
         )
     )
     return input_path_list
-
-
-def main(input_path):
-    print('処理中...')
-    GetReceiptContours(input_path)
-    geri = GetEachReceiptImg(input_path)
-    trimmed_image_path = geri.projective_transformation()
-    return trimmed_image_path
-
-
-# if __name__ == "__main__":
-#     input_path = ''
-#     main(input_path)

@@ -2,7 +2,8 @@ python-dotenv
 fastapi
 uvicorn
 python-multipart
-opencv-python
+opencv-python-headless
+opencv-contrib-python-headless
 numpy
 Pillow
 google-cloud-vision

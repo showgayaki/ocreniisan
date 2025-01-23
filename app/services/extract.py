@@ -1,13 +1,13 @@
 import re
 import math
-from .store_dict import STORE_DICT
+from app.core.store_dict import STORE_DICT
 
 
 class Extract:
-    def __init__(self, lines):
-        self.lines = lines
+    def __init__(self) -> None:
+        pass
 
-    def extract_info(self):
+    def receipt_detail(self, lines: list) -> dict:
         distance_threshold = 30  # 商品名と金額の距離の閾値(これ以上離れていたら金額とみなす)
         response = {}
         line_text = ''
@@ -18,17 +18,17 @@ class Extract:
         item_amount_lines = []
         date_line_index = 9999  # テキトーな大きい数字を入れておく
 
-        for line_index in range(len(self.lines)):
+        for line_index in range(len(lines)):
             last_line_text = line_text
             line_text = ''
             # 行のwordごとの処理
-            for word_index in range(len(self.lines[line_index])):
+            for word_index in range(len(lines[line_index])):
                 # wordオブジェクトの[2]がテキスト
-                word = self.lines[line_index][word_index][2]
+                word = lines[line_index][word_index][2]
 
                 # 1個前のword(商品名)の右端と今回のword(金額)の左端の距離が、ある程度離れて記載されている
                 if word_index > 0:
-                    distance_item_and_amount = self.lines[line_index][word_index][-1].vertices[0].x - self.lines[line_index][word_index - 1][-1].vertices[1].x
+                    distance_item_and_amount = lines[line_index][word_index][-1].vertices[0].x - lines[line_index][word_index - 1][-1].vertices[1].x
 
                 if distance_item_and_amount > distance_threshold:
                     # 小計or合計行はフォントが大きい場合があるので「,」(「.」に誤検知)と数字との間が空いて、別のwordとして認識されることがある
@@ -43,7 +43,7 @@ class Extract:
                         distance_item_and_amount = 0
                         # まいばすけっと対策：商品金額のあとに「A」という文字列が付いていた
                         # そのため、行の最終単語が数字でない場合は行をbreakする
-                        if is_items_area and (word_index == len(self.lines[line_index]) - 1) and (self.amount_str_to_int(word) == 0):
+                        if is_items_area and (word_index == len(lines[line_index]) - 1) and (self.amount_str_to_int(word) == 0):
                             line_text = '_'.join(line_text.split('_')[:-1])
                             break
                 else:

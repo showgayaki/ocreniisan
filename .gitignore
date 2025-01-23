@@ -1,3 +1,11 @@
+# add
+key/
+*.jpg
+*.png
+store_dict.py
+.DS_Store
+*.log*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -127,10 +135,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-# add
-key/
-*.jpg
-*.png
-store_dict.py
-.DS_Store

@@ -1,0 +1,52 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+      "default": {
+        "format": "%(asctime)s | %(levelname)-8s | %(filename)-10s: %(lineno)-4s | %(message)s"
+      }
+    },
+    "handlers": {
+      "consoleHandler": {
+        "class": "logging.StreamHandler",
+        "level": "DEBUG",
+        "formatter": "default",
+        "stream": "ext://sys.stdout"
+      },
+      "rotatingFileHandler": {
+        "class": "logging.handlers.RotatingFileHandler",
+        "level": "DEBUG",
+        "formatter": "default",
+        "filename": "app/log/ocreniisan.log",
+        "encoding": "utf-8",
+        "maxBytes": 1048576,
+        "backupCount": 3
+      }
+    },
+    "loggers": {
+      "ocr": {
+        "level": "INFO",
+        "handlers": ["consoleHandler", "rotatingFileHandler"],
+        "propagate": false
+      },
+      "uvicorn": {
+        "level": "INFO",
+        "handlers": ["consoleHandler", "rotatingFileHandler"],
+        "propagate": false
+      },
+      "uvicorn.access": {
+        "level": "INFO",
+        "handlers": ["consoleHandler", "rotatingFileHandler"],
+        "propagate": false
+      },
+      "uvicorn.error": {
+        "level": "INFO",
+        "handlers": ["consoleHandler", "rotatingFileHandler"],
+        "propagate": false
+      }
+    },
+    "root": {
+      "level": "ERROR",
+      "handlers": ["consoleHandler"]
+    }
+  }
