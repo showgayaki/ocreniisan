@@ -1,13 +1,3 @@
-FROM gcr.io/distroless/python3-debian12 AS base
-ARG TARGETARCH
-
-FROM base AS amd64
-ENV ARCH x86_64
-
-FROM base AS arm64
-ENV ARCH aarch64
-
-
 FROM python:3.11-slim-bookworm AS build
 
 # Install OpenCV's runtime dependencies
@@ -22,7 +12,7 @@ RUN python -m pip install --upgrade pip setuptools \
 && pip install --no-cache-dir -r requirements.txt
 
 
-FROM ${TARGETARCH} AS prod
+FROM gcr.io/distroless/python3-debian12 AS prod
 
 # site-packagesをコピー
 COPY --from=build /usr/local/lib/python3.11/site-packages /usr/lib/python3.11/dist-packages
