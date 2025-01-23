@@ -62,7 +62,18 @@ async def receipt_ocr(receiptImage: UploadFile, trimmed: bool = False) -> dict:
             return error_message
 
     # OCR実行
-    lines = exec_ocr(trimmed_image_path)
+    try:
+        lines = exec_ocr(trimmed_image_path)
+    except Exception as e:
+        logger.error('Failed to run OCR.')
+        # エラー画像保存
+        error_message = save_error_image(
+            'ocr',
+            original_image_path,
+            'OCR処理中に何かおかしなことが起きました。',
+            e
+        )
+        return error_message
 
     # 情報抽出
     logger.info('Extract information.')

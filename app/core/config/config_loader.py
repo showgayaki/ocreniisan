@@ -9,7 +9,7 @@ class Config:
 
 
 def load_config() -> Config:
-    image_save_dir = Path(__file__).parents[1].joinpath('images').resolve()
+    image_save_dir = Path(__file__).parents[2].joinpath('images').resolve()
 
     return Config(
         IMAGE_SAVE_DIR=image_save_dir,
